@@ -3,6 +3,7 @@ import {getTranslations} from "next-intl/server";
 import {Link} from "@/i18n/navigation";
 import {Logo} from "@/components/brand/logo";
 import {Button} from "@/components/ui/button";
+import {Footer} from "@/components/shared/footer";
 
 export default async function PublicLayout({
   children,
@@ -30,12 +31,7 @@ export default async function PublicLayout({
         </div>
       </header>
       <main className="flex flex-1 flex-col">{children}</main>
-      <footer className="border-t border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-5 py-8 text-sm text-[var(--text-secondary)] sm:flex-row sm:items-center sm:justify-between">
-          <Logo />
-          <p>{t("subheadline")}</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

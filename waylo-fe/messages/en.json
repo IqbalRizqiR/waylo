@@ -1033,6 +1033,11 @@
   },
   "footer": {
     "tagline": "Find Your Way. Build Your Future.",
-    "rights": "All rights reserved."
+    "subheadline": "Find the right learning roadmap, level up your skills, earn certifications, and reach your dream career with Waylo.",
+    "rights": "All rights reserved.",
+    "partnerLabel": "Official Competition & Partners",
+    "jhicAlt": "JHIC 2026 - Jagoan Hosting Innovation Competition and Official Partners",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
   }
 }

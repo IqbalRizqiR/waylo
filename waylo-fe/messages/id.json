@@ -1033,6 +1033,11 @@
   },
   "footer": {
     "tagline": "Find Your Way. Build Your Future.",
-    "rights": "Semua hak dilindungi."
+    "subheadline": "Temukan roadmap belajar yang tepat, tingkatan skill, dapatkan sertifikasi, dan wujudkan karier impianmu bersama Waylo.",
+    "rights": "Semua hak dilindungi.",
+    "partnerLabel": "Kompetisi Resmi & Mitra",
+    "jhicAlt": "JHIC 2026 - Jagoan Hosting Innovation Competition dan Mitra Resmi",
+    "terms": "Syarat & Ketentuan",
+    "privacy": "Kebijakan Privasi"
   }
 }
