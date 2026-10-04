@@ -18,6 +18,7 @@ COPY packages/shared ./packages/shared
 COPY waylo-be ./waylo-be
 WORKDIR /app/waylo-be
 RUN npx prisma generate
+RUN npx esbuild src/server.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=dist/server.js
 
 FROM base AS runner
 WORKDIR /app/waylo-be
@@ -27,4 +28,4 @@ COPY --from=builder /app/packages /app/packages
 COPY --from=builder /app/waylo-be /app/waylo-be
 
 EXPOSE 4000
-CMD ["npm", "start"]
+CMD ["node", "dist/server.js"]
