@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fcfcfd;
+  --foreground: #000000;
+
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+
+  --primary: #001ec0;
+  --primary-foreground: #ffffff;
+  --augment: #2f59fe;
+  --secondary: #e1e5ff;
+  --secondary-foreground: #001ec0;
+
+  --muted: #f4f5fa;
+  --muted-foreground: #6b6b6b;
+  --accent: #e1e5ff;
+  --accent-foreground: #001ec0;
+
+  --success: #01ca2c;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+
+  --border: #e5e7f0;
+  --input: #e5e7f0;
+  --ring: #2f59fe;
+
+  --text-secondary: #444444;
+  --chip-border: #667eff;
+  --teal: #0fc7a7;
+
+  --radius: 0.875rem;
+  --gradient-cta: linear-gradient(180deg, #2f59fe 41%, #2f22d1 100%);
+  --gradient-teal: linear-gradient(180deg, #0fc7a7 0%, #037483 100%);
+  --shadow-brand: 0 0 10px rgba(0, 30, 192, 0.15);
+  --shadow-brand-lg: 0 0 25px rgba(0, 30, 192, 0.25);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-augment: var(--augment);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-text-secondary: var(--text-secondary);
+  --color-chip-border: var(--chip-border);
+  --color-teal: var(--teal);
+
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-pill: 46px;
+  --radius-input: 45px;
+  --radius-card: 14px;
+  --radius-chip: 18px;
+
+  --shadow-brand: var(--shadow-brand);
+  --shadow-brand-lg: var(--shadow-brand-lg);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.025em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .bg-gradient-cta {
+    background-image: var(--gradient-cta);
+  }
+
+  .bg-gradient-teal {
+    background-image: var(--gradient-teal);
+  }
+}
+
+@keyframes waylo-sheen {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    #eceef6 37%,
+    var(--muted) 63%
+  );
+  background-size: 200% 100%;
+  animation: waylo-sheen 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

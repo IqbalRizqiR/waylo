@@ -1,0 +1,14 @@
+{
+  "name": "waylo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix waylo-fe",
+    "build": "npm run build --prefix waylo-fe",
+    "lint": "npm run lint --prefix waylo-fe",
+    "typecheck": "npm run typecheck --prefix waylo-fe",
+    "api:dev": "npm run dev --prefix waylo-be",
+    "api:test": "npm test --prefix waylo-be",
+    "test:e2e": "npm run test:e2e --prefix waylo-fe"
+  }
+}

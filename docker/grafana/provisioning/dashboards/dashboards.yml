@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: "JHIC 2.0"
+    orgId: 1
+    folder: "JHIC 2.0"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards

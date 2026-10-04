@@ -1,0 +1,668 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+enum Role {
+  learner
+  mentor
+  learning_provider
+  company_member
+  admin
+}
+
+enum CompanySubRole {
+  owner
+  recruiter
+  interviewer
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  role         Role     @default(learner)
+  avatarInitials String @map("avatar_initials") @default("")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  learnerProfile  LearnerProfile?
+  mentorProfile   MentorProfile?
+  memberships     CompanyMember[]
+  userSkills      UserSkill[]
+  roadmaps        Roadmap[]
+  attempts        Attempt[]
+  certificates    Certificate[]
+  applications    Application[]
+  mentoringSessions MentoringSession[] @relation("LearnerSessions")
+  courseEnrollments CourseEnrollment[]
+  lessonProgress   LessonProgress[]
+  projectSubmissions ProjectSubmission[]
+
+  @@map("users")
+}
+
+model LearnerProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique @map("user_id")
+  headline         String   @default("")
+  bio              String?  @default("")
+  location         String   @default("")
+  targetCareerId   String?  @map("target_career_id")
+  openToWork       Boolean  @default(false) @map("open_to_work")
+  talentPoolOptIn  Boolean  @default(false) @map("talent_pool_opt_in")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetCareer Career? @relation(fields: [targetCareerId], references: [id])
+
+  @@map("learner_profiles")
+}
+
+model MentorProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id")
+  headline       String
+  bio            String?  @default("")
+  hourlyRate     Int      @default(0) @map("hourly_rate")
+  expertise      String[] @default([])
+  rating         Decimal? @db.Decimal(2, 1)
+  reviewCount    Int      @default(0) @map("review_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions     MentoringSession[]
+  courses      Course[]
+  availability MentorAvailability[]
+  reviews      MentorReview[]
+
+  @@map("mentor_profiles")
+}
+
+model Company {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?  @default("")
+  industry      String?  @default("")
+  location      String?  @default("")
+  website       String?  @default("")
+  logoUrl       String?  @map("logo_url")
+  employeeCount String?  @map("employee_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  members CompanyMember[]
+  jobs    Job[]
+
+  @@map("companies")
+}
+
+model CompanyMember {
+  id       String        @id @default(cuid())
+  userId   String        @map("user_id")
+  companyId String       @map("company_id")
+  subRole  CompanySubRole @default(owner) @map("sub_role")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@map("company_members")
+}
+
+// ---------------------------------------------------------------------------
+// Skills graph (the core domain)
+// ---------------------------------------------------------------------------
+
+enum SkillLevel {
+  beginner
+  intermediate
+  advanced
+  expert
+}
+
+model Skill {
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  name     String
+  category String
+
+  requirements  CareerSkillRequirement[]
+  userSkills    UserSkill[]
+  jobSkills     JobSkill[]
+  roadmapItems  RoadmapItem[]
+  courses       Course[]
+  projects      Project[]
+
+  @@map("skills")
+}
+
+model Career {
+  id      String @id @default(cuid())
+  slug    String @unique
+  title   String
+  summary String
+
+  requirements    CareerSkillRequirement[]
+  roadmaps        Roadmap[]
+  learnerProfiles LearnerProfile[]
+
+  @@map("careers")
+}
+
+model CareerSkillRequirement {
+  id           String     @id @default(cuid())
+  careerId     String     @map("career_id")
+  skillId      String     @map("skill_id")
+  requiredLevel SkillLevel @map("required_level")
+
+  career Career @relation(fields: [careerId], references: [id], onDelete: Cascade)
+  skill  Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([careerId, skillId])
+  @@map("career_skill_requirements")
+}
+
+enum VerificationSource {
+  assessment
+  project
+  mentor
+}
+
+model UserSkill {
+  id           String              @id @default(cuid())
+  userId       String              @map("user_id")
+  skillId      String              @map("skill_id")
+  level        SkillLevel
+  isVerified   Boolean             @default(false) @map("is_verified")
+  sourceType   VerificationSource? @map("source_type")
+  sourceId     String?             @map("source_id")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@map("user_skills")
+}
+
+// ---------------------------------------------------------------------------
+// Roadmap
+// ---------------------------------------------------------------------------
+
+enum RoadmapModuleStatus {
+  completed
+  in_progress
+  not_started
+}
+
+model Roadmap {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  careerId        String   @map("career_id")
+  trackTitle      String   @map("track_title")
+  progressPercent Int      @default(0) @map("progress_percent")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  career  Career        @relation(fields: [careerId], references: [id], onDelete: Cascade)
+  modules RoadmapItem[]
+
+  @@map("roadmaps")
+}
+
+model RoadmapItem {
+  id        String              @id @default(cuid())
+  roadmapId String              @map("roadmap_id")
+  skillId   String?             @map("skill_id")
+  order     Int
+  title     String
+  summary   String
+  status    RoadmapModuleStatus @default(not_started)
+
+  roadmap Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  skill   Skill?  @relation(fields: [skillId], references: [id])
+
+  @@map("roadmap_items")
+}
+
+// ---------------------------------------------------------------------------
+// Courses & Learning (H5P-powered interactive content)
+// ---------------------------------------------------------------------------
+
+model Course {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  mentorId        String?  @map("mentor_id")
+  skillId         String?  @map("skill_id")
+  thumbnailUrl    String?  @map("thumbnail_url")
+  durationMinutes Int      @default(0) @map("duration_minutes")
+  order           Int      @default(0)
+  isPublished     Boolean  @default(false) @map("is_published")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  mentor      MentorProfile?    @relation(fields: [mentorId], references: [id], onDelete: SetNull)
+  skill       Skill?            @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  lessons     Lesson[]
+  enrollments CourseEnrollment[]
+
+  @@map("courses")
+}
+
+model Lesson {
+  id                String  @id @default(cuid())
+  courseId          String  @map("course_id")
+  order             Int
+  title             String
+  h5pContentPath    String? @map("h5p_content_path")
+  durationMinutes   Int     @default(0) @map("duration_minutes")
+  interactiveConfig Json?   @map("interactive_config")
+
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@map("lessons")
+}
+
+enum LessonStatus {
+  not_started
+  in_progress
+  completed
+}
+
+model LessonProgress {
+  id          String       @id @default(cuid())
+  lessonId    String       @map("lesson_id")
+  userId      String       @map("user_id")
+  status      LessonStatus @default(not_started)
+  completedAt DateTime?    @map("completed_at")
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, userId])
+  @@map("lesson_progress")
+}
+
+model CourseEnrollment {
+  id              String    @id @default(cuid())
+  courseId         String    @map("course_id")
+  userId          String    @map("user_id")
+  progressPercent Int       @default(0) @map("progress_percent")
+  completedAt     DateTime? @map("completed_at")
+  enrolledAt      DateTime  @default(now()) @map("enrolled_at")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, userId])
+  @@map("course_enrollments")
+}
+
+// ---------------------------------------------------------------------------
+// Assessment
+// ---------------------------------------------------------------------------
+
+enum AssessmentType {
+  career_interest
+  personality
+  learning_style
+  skill_basic
+}
+
+enum QuestionType {
+  multiple_choice
+  multiple_select
+  true_false
+  short_answer
+  ordering
+}
+
+model Assessment {
+  id              String         @id @default(cuid())
+  type            AssessmentType
+  title           String
+  description     String
+  durationMinutes Int            @map("duration_minutes")
+  questionCount   Int            @map("question_count")
+
+  questions Question[]
+  attempts  Attempt[]
+
+  @@map("assessments")
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  assessmentId  String       @map("assessment_id")
+  order         Int
+  type          QuestionType
+  prompt        String
+  options       Json?
+  correctAnswer Json         @map("correct_answer")
+  points        Int          @default(1)
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model Attempt {
+  id           String    @id @default(cuid())
+  assessmentId String    @map("assessment_id")
+  userId       String    @map("user_id")
+  answers      Json?
+  scorePercent Int?      @map("score_percent")
+  label        String?
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("attempts")
+}
+
+// ---------------------------------------------------------------------------
+// Mentoring
+// ---------------------------------------------------------------------------
+
+enum SessionStatus {
+  requested
+  scheduled
+  completed
+  no_show
+  cancelled
+}
+
+model MentorAvailability {
+  id        String        @id @default(cuid())
+  mentorId  String        @map("mentor_id")
+  dayOfWeek Int           @map("day_of_week")
+  startTime String        @map("start_time")
+  endTime   String        @map("end_time")
+
+  mentor MentorProfile @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@map("mentor_availability")
+}
+
+model MentoringSession {
+  id          String        @id @default(cuid())
+  mentorId    String        @map("mentor_id")
+  learnerId   String        @map("learner_id")
+  topic       String
+  startsAt    DateTime      @map("starts_at")
+  endsAt      DateTime?     @map("ends_at")
+  status      SessionStatus @default(requested)
+  meetingUrl  String?       @map("meeting_url")
+  note        String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  mentor  MentorProfile @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  learner User          @relation("LearnerSessions", fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@map("mentoring_sessions")
+}
+
+model MentorReview {
+  id                  String   @id @default(cuid())
+  mentorId            String   @map("mentor_id")
+  applicationId       String?  @map("application_id")
+  projectSubmissionId String?  @map("project_submission_id")
+  score               Int?
+  verdict             String   @default("recommended")
+  technicalFeedback   String   @map("technical_feedback")
+  reviewedAt          DateTime @default(now()) @map("reviewed_at")
+
+  mentor            MentorProfile      @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  application       Application?       @relation(fields: [applicationId], references: [id])
+  projectSubmission ProjectSubmission? @relation(fields: [projectSubmissionId], references: [id])
+
+  @@map("mentor_reviews")
+}
+
+// ---------------------------------------------------------------------------
+// Practical Projects & Verification
+// ---------------------------------------------------------------------------
+
+enum SubmissionStatus {
+  submitted
+  in_review
+  approved
+  rejected
+}
+
+model Project {
+  id             String              @id @default(cuid())
+  title          String
+  description    String
+  brief          String
+  starterRepoUrl String?             @map("starter_repo_url")
+  skillId        String?             @map("skill_id")
+  difficulty     String              @default("medium")
+  order          Int                 @default(0)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  skill       Skill?              @relation(fields: [skillId], references: [id])
+  submissions ProjectSubmission[]
+
+  @@map("projects")
+}
+
+model ProjectSubmission {
+  id          String           @id @default(cuid())
+  projectId   String           @map("project_id")
+  userId      String           @map("user_id")
+  repoUrl     String           @map("repo_url")
+  demoUrl     String?          @map("demo_url")
+  notes       String?
+  status      SubmissionStatus @default(submitted)
+  feedback    String?
+  submittedAt DateTime         @default(now()) @map("submitted_at")
+  reviewedAt  DateTime?        @map("reviewed_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mentorReviews MentorReview[]
+
+  @@unique([projectId, userId])
+  @@map("project_submissions")
+}
+
+// ---------------------------------------------------------------------------
+// Credentials
+// ---------------------------------------------------------------------------
+
+enum CertificateStatus {
+  available
+  obtained
+}
+
+model Certificate {
+  id              String            @id @default(cuid())
+  userId          String            @map("user_id")
+  title           String
+  issuer          String
+  category        String
+  status          CertificateStatus @default(available)
+  obtainedAt      DateTime?         @map("obtained_at")
+  verificationUrl String?           @map("verification_url")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("certificates")
+}
+
+// ---------------------------------------------------------------------------
+// Hiring
+// ---------------------------------------------------------------------------
+
+enum JobStatus {
+  draft
+  preview
+  published
+  archived
+}
+
+enum EmploymentType {
+  full_time
+  part_time
+  contract
+  internship
+}
+
+enum WorkMode {
+  remote
+  hybrid
+  onsite
+}
+
+model Job {
+  id                 String         @id @default(cuid())
+  companyId          String         @map("company_id")
+  title              String
+  description        String
+  employmentType     EmploymentType @map("employment_type")
+  workMode           WorkMode       @map("work_mode")
+  location           String
+  salaryMin          Int?           @map("salary_min")
+  salaryMax          Int?           @map("salary_max")
+  experienceMinYears Int?           @map("experience_min_years")
+  experienceMaxYears Int?           @map("experience_max_years")
+  status             JobStatus      @default(draft)
+  isPremium          Boolean        @default(false) @map("is_premium")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  skills       JobSkill[]
+  applications Application[]
+
+  @@map("jobs")
+}
+
+model JobSkill {
+  id       String     @id @default(cuid())
+  jobId    String     @map("job_id")
+  skillId  String     @map("skill_id")
+  minLevel SkillLevel @map("min_level")
+
+  job   Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, skillId])
+  @@map("job_skills")
+}
+
+enum ApplicationStage {
+  applied
+  general_screening
+  mentor_screening
+  skill_assessment
+  mentor_review
+  shortlisted
+  hrd_review
+  interview
+  hired
+  rejected
+}
+
+enum ApplicationTrack {
+  premium
+  free
+}
+
+model Application {
+  id                String           @id @default(cuid())
+  jobId             String           @map("job_id")
+  candidateId       String           @map("candidate_id")
+  track             ApplicationTrack
+  stage             ApplicationStage @default(applied)
+  skillMatchPercent Int?             @map("skill_match_percent")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  job         Job                      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate   User                     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  stageHistory ApplicationStageHistory[]
+  mentorReviews MentorReview[]
+
+  @@unique([jobId, candidateId])
+  @@map("applications")
+}
+
+model ApplicationStageHistory {
+  id            String           @id @default(cuid())
+  applicationId String           @map("application_id")
+  stage         ApplicationStage
+  actor         String
+  note          String?
+  occurredAt    DateTime         @default(now()) @map("occurred_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("application_stage_history")
+}
+
+// ---------------------------------------------------------------------------
+// Money
+// ---------------------------------------------------------------------------
+
+enum PlanCode {
+  free_trial
+  premium
+}
+
+model Plan {
+  id            String    @id @default(cuid())
+  code          PlanCode  @unique
+  name          String
+  priceAmount   Int       @map("price_amount")
+  priceCurrency String    @default("IDR") @map("price_currency")
+  billingPeriod String    @map("billing_period")
+  features      String[]
+  isRecommended Boolean   @default(false) @map("is_recommended")
+
+  @@map("plans")
+}
+
+enum SubscriptionStatus {
+  trial
+  active
+  past_due
+  cancelled
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  companyId          String?            @map("company_id")
+  userId             String?            @map("user_id")
+  planCode           PlanCode           @map("plan_code")
+  status             SubscriptionStatus @default(trial)
+  currentPeriodEndsAt DateTime?         @map("current_period_ends_at")
+  idempotencyKey     String?            @unique @map("idempotency_key")
+  externalOrderId    String?            @unique @map("external_order_id")
+  paymentToken       String?            @map("payment_token")
+  paymentUrl         String?            @map("payment_url")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  @@map("subscriptions")
+}
