@@ -12,10 +12,10 @@ RUN npm install --prefix waylo-fe
 
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/packages ./packages
-COPY --from=deps /app/waylo-fe/node_modules ./waylo-fe/node_modules
 COPY packages/shared ./packages/shared
 COPY waylo-fe ./waylo-fe
+COPY --from=deps /app/packages ./packages
+COPY --from=deps /app/waylo-fe/node_modules ./waylo-fe/node_modules
 ARG NEXT_PUBLIC_API_URL=http://localhost:4000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1

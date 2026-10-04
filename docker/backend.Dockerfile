@@ -12,10 +12,10 @@ RUN npm install --prefix waylo-be
 
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/packages ./packages
-COPY --from=deps /app/waylo-be/node_modules ./waylo-be/node_modules
 COPY packages/shared ./packages/shared
 COPY waylo-be ./waylo-be
+COPY --from=deps /app/packages ./packages
+COPY --from=deps /app/waylo-be/node_modules ./waylo-be/node_modules
 WORKDIR /app/waylo-be
 RUN npx prisma generate
 RUN npx esbuild src/server.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=dist/server.js
