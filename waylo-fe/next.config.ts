@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname, ".."),
   },
+  experimental: {
+    cpus: 1,
+  },
 };
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
