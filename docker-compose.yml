@@ -4,15 +4,15 @@ services:
     container_name: waylo-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: waylo
-      POSTGRES_PASSWORD: waylo
-      POSTGRES_DB: waylo
+      POSTGRES_USER: ${POSTGRES_USER:-waylo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-waylo}
+      POSTGRES_DB: ${POSTGRES_DB:-waylo}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - waylo-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U waylo -d waylo"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-waylo} -d ${POSTGRES_DB:-waylo}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,9 +21,9 @@ services:
     image: redis:7-alpine
     container_name: waylo-redis
     restart: unless-stopped
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory ${REDIS_MAX_MEMORY:-256mb} --maxmemory-policy allkeys-lru
     ports:
-      - "6380:6379"
+      - "127.0.0.1:${REDIS_PORT:-6380}:6379"
     volumes:
       - waylo-redis-data:/data
     healthcheck:
@@ -40,13 +40,17 @@ services:
     restart: unless-stopped
     environment:
       PORT: 4000
-      NODE_ENV: production
-      CORS_ORIGIN: http://localhost:3000
-      DATABASE_URL: postgresql://waylo:waylo@postgres:5432/waylo?schema=public
-      JWT_ACCESS_SECRET: dev-access-secret-change-me
-      JWT_REFRESH_SECRET: dev-refresh-secret-change-me
+      NODE_ENV: ${NODE_ENV:-production}
+      CORS_ORIGIN: ${FRONTEND_DOMAIN:-http://localhost:3000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-waylo}:${POSTGRES_PASSWORD:-waylo}@postgres:5432/${POSTGRES_DB:-waylo}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY:-SB-Mid-server-waylo-demo}
+      MIDTRANS_IS_PRODUCTION: ${MIDTRANS_IS_PRODUCTION:-false}
     ports:
-      - "4000:4000"
+      - "127.0.0.1:${API_PORT:-4000}:4000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,15 +62,15 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_API_URL: ${API_DOMAIN:-http://localhost:4000}
     container_name: waylo-fe
     restart: unless-stopped
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: 3000
-      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_API_URL: ${API_DOMAIN:-http://localhost:4000}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - backend
 
@@ -75,9 +79,9 @@ services:
     container_name: waylo-postgres-exporter
     restart: unless-stopped
     environment:
-      DATA_SOURCE_NAME: postgresql://waylo:waylo@postgres:5432/waylo?sslmode=disable
-    ports:
-      - "9187:9187"
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-waylo}:${POSTGRES_PASSWORD:-waylo}@postgres:5432/${POSTGRES_DB:-waylo}?sslmode=disable
+    expose:
+      - "9187"
     depends_on:
       postgres:
         condition: service_healthy
@@ -88,8 +92,8 @@ services:
     restart: unless-stopped
     environment:
       REDIS_ADDR: redis://redis:6379
-    ports:
-      - "9121:9121"
+    expose:
+      - "9121"
     depends_on:
       redis:
         condition: service_healthy
@@ -98,8 +102,8 @@ services:
     image: prom/node-exporter:v1.8.2
     container_name: waylo-node-exporter
     restart: unless-stopped
-    ports:
-      - "9100:9100"
+    expose:
+      - "9100"
 
   prometheus:
     image: prom/prometheus:v2.53.3
@@ -110,7 +114,7 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-lifecycle"
     ports:
-      - "9090:9090"
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - waylo-prometheus-data:/prometheus
@@ -125,12 +129,13 @@ services:
     container_name: waylo-grafana
     restart: unless-stopped
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: ${MONITORING_DOMAIN:-http://localhost:3001}
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/jhic2-loadtest-warroom.json
     ports:
-      - "3001:3000"
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./docker/grafana/dashboards:/etc/grafana/dashboards:ro
