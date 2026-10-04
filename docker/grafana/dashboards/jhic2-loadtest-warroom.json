@@ -493,7 +493,7 @@
       },
       "targets": [
         {
-          "expr": "((sum(pg_stat_activity_count{state=\"active\"}) / sum(pg_settings_max_connections)) * 100) or vector(0)",
+          "expr": "((sum(pg_stat_activity_count{state=\"active\"}) / sum(pg_settings_max_connections)) * 100) or ((sum(pg_stat_database_numbackends) / 100) * 100) or vector(0)",
           "legendFormat": "Traffic Ratio",
           "refId": "A"
         }
@@ -605,7 +605,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(pg_stat_database_xact_commit{datname=\"waylo\"}) + sum(pg_stat_database_xact_rollback{datname=\"waylo\"})) or vector(0)",
+          "expr": "(sum(pg_stat_database_xact_commit) + sum(pg_stat_database_xact_rollback)) or vector(0)",
           "legendFormat": "Transactions",
           "refId": "A"
         }
@@ -1451,7 +1451,7 @@
       },
       "targets": [
         {
-          "expr": "sum(pg_stat_activity_count{state=\"active\"}) or vector(0)",
+          "expr": "sum(pg_stat_activity_count{state=\"active\"}) or sum(pg_stat_database_numbackends) or vector(0)",
           "legendFormat": "Active",
           "refId": "A"
         },

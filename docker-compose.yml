@@ -80,9 +80,8 @@ services:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: waylo-postgres-exporter
     restart: unless-stopped
-    profiles:
-      - exporters
     environment:
+      GOMAXPROCS: 1
       DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-waylo}:${POSTGRES_PASSWORD:-waylo}@postgres:5432/${POSTGRES_DB:-waylo}?sslmode=disable
     expose:
       - "9187"
@@ -94,9 +93,8 @@ services:
     image: oliver006/redis_exporter:v1.67.0-alpine
     container_name: waylo-redis-exporter
     restart: unless-stopped
-    profiles:
-      - exporters
     environment:
+      GOMAXPROCS: 1
       REDIS_ADDR: redis://redis:6379
     expose:
       - "9121"
@@ -108,8 +106,8 @@ services:
     image: prom/node-exporter:v1.8.2
     container_name: waylo-node-exporter
     restart: unless-stopped
-    profiles:
-      - exporters
+    environment:
+      GOMAXPROCS: 1
     expose:
       - "9100"
 
@@ -130,6 +128,9 @@ services:
       - waylo-prometheus-data:/prometheus
     depends_on:
       - backend
+      - postgres-exporter
+      - redis-exporter
+      - node-exporter
 
   grafana:
     image: grafana/grafana:10.4.5

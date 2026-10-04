@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${1:-http://localhost:4000}"
+RAW_URL="${1:-http://localhost:4000}"
+BASE_URL="${RAW_URL%/}"
 ITERATIONS="${2:-60}"
 
 echo "=================================================="
@@ -21,16 +22,18 @@ ROUTES=(
   "/api/curriculum/expertise"
   "/api/dashboard/public-stats"
   "/api/dashboard/visitors"
-  "/unknown-route"
+  "/unknown-route-404"
 )
 
 for ((i = 1; i <= ITERATIONS; i++)); do
   for ROUTE in "${ROUTES[@]}"; do
-    curl -s -o /dev/null -w "%{http_code} %{time_total}s -> ${ROUTE}\n" "${BASE_URL}${ROUTE}" || true &
+    # 2 parallel requests per route per tick to simulate realistic user concurrency
+    curl -s -k -o /dev/null -w "%{http_code} %{time_total}s -> ${ROUTE}\n" "${BASE_URL}${ROUTE}" || true &
+    curl -s -k -o /dev/null "${BASE_URL}${ROUTE}" || true &
   done
   wait
-  sleep 0.5
+  sleep 0.2
 done
 
 echo ""
-echo "✅ Finished traffic generation. Check Grafana at http://localhost:3001"
+echo "✅ Finished traffic generation. Check Grafana at ${BASE_URL}/monitoring or http://localhost:3001"
