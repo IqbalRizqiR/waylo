@@ -7,8 +7,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-waylo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-waylo}
       POSTGRES_DB: ${POSTGRES_DB:-waylo}
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    expose:
+      - "5432"
     volumes:
       - waylo-postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -22,8 +22,8 @@ services:
     container_name: waylo-redis
     restart: unless-stopped
     command: redis-server --maxmemory ${REDIS_MAX_MEMORY:-256mb} --maxmemory-policy allkeys-lru
-    ports:
-      - "127.0.0.1:${REDIS_PORT:-6380}:6379"
+    expose:
+      - "6379"
     volumes:
       - waylo-redis-data:/data
     healthcheck:
@@ -41,6 +41,7 @@ services:
     environment:
       PORT: 4000
       NODE_ENV: ${NODE_ENV:-production}
+      UV_THREADPOOL_SIZE: 1
       CORS_ORIGIN: ${FRONTEND_DOMAIN:-http://localhost:3000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-waylo}:${POSTGRES_PASSWORD:-waylo}@postgres:5432/${POSTGRES_DB:-waylo}?schema=public
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me}
@@ -68,6 +69,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3000
+      UV_THREADPOOL_SIZE: 1
       NEXT_PUBLIC_API_URL: ${API_DOMAIN:-http://localhost:4000}
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
@@ -115,12 +117,14 @@ services:
     image: prom/prometheus:v2.53.3
     container_name: waylo-prometheus
     restart: unless-stopped
+    environment:
+      GOMAXPROCS: 1
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-lifecycle"
-    ports:
-      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    expose:
+      - "9090"
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - waylo-prometheus-data:/prometheus
@@ -132,6 +136,7 @@ services:
     container_name: waylo-grafana
     restart: unless-stopped
     environment:
+      GOMAXPROCS: 1
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
